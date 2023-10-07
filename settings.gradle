@@ -1,0 +1,6 @@
+rootProject.name = "jmh-test"
+
+String[] modules = [
+]
+
+include modules

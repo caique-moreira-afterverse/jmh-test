@@ -1,0 +1,76 @@
+buildscript {
+  repositories {
+  }
+
+  // This is necessary jib conflicts with maven-settings, braking the release in runtime
+  // See more: https://github.com/GoogleContainerTools/jib/issues/591
+  dependencies {
+  }
+}
+
+plugins {
+  id "org.jetbrains.kotlin.jvm" version "$kotlinVersion"
+  id "org.jlleitschuh.gradle.ktlint" version "$ktlintGradleVersion"
+}
+
+allprojects {
+  task printAllDependencies(type: DependencyReportTask) {}
+
+  apply plugin: "java"
+  apply plugin: "java-library"
+  apply plugin: "org.jetbrains.kotlin.jvm"
+  apply plugin: "org.jlleitschuh.gradle.ktlint"
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      // TODO(cachopo): set vendor to JvmVendorSpec.ADOPTIUM (Temurin) after
+      //  upgrading to Gradle 7.4
+      //  see https://github.com/gradle/gradle/pull/18509
+      vendor = JvmVendorSpec.matching("adoptium")
+      implementation = JvmImplementation.VENDOR_SPECIFIC
+    }
+  }
+
+  tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+      jvmTarget = "17"
+      allWarningsAsErrors = true
+    }
+  }
+
+  // TODO(cachopo): Gradle 7 requires duplicatesStrategy to be set explicitly
+  //  and there's a bug when a package exists in different subprojects
+  //  see https://github.com/gradle/gradle/pull/15759
+  //  see https://github.com/gradle/gradle/issues/17236
+  tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  }
+
+  ktlint {
+    debug = false
+    ignoreFailures = false
+    verbose = false
+  }
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+
+    test {
+      useJUnitPlatform()
+    }
+  }
+
+  dependencies {
+    implementation "org.apache.logging.log4j:log4j-api:2.17.0"
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinXVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$kotlinXVersion"
+    implementation "ch.qos.logback:logback-classic:$logbackVersion"
+  }
+}
+
+group "com.test.kiq"
